@@ -107,11 +107,11 @@
 
 <script>
     // --- 1. INITIALIZE SUPABASE ---
-    // PASTE YOUR URL AND KEY HERE:
     const SUPABASE_URL = 'https://imilvyjixmsftptswghz.supabase.co'; 
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltaWx2eWppeG1zZnRwdHN3Z2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDE5NTAsImV4cCI6MjA5MDgxNzk1MH0.nAesLNCfSTgtAAYhmes5YfCG7otNnA1RXuzRowdqAGs';
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // CHANGED: Renamed 'supabase' to 'supabaseClient' to fix the naming collision
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let currentUser = null;
 
     // --- 2. NAVIGATION & AUTH FLOW ---
@@ -124,7 +124,7 @@
     }
 
     async function checkAuthAndNavigate() {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
             currentUser = session.user;
             document.getElementById('dashboard-user-email').innerText = `Logged in as: ${currentUser.email}`;
@@ -155,7 +155,7 @@
         const email = document.getElementById('regEmail').value.trim();
         const password = document.getElementById('regPassword').value;
 
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
 
         if (error) {
             alert("Error: " + error.message);
@@ -176,7 +176,7 @@
         const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
         if (error) {
             alert("Error: " + error.message);
@@ -191,7 +191,7 @@
 
     // Logout
     async function logout() {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         currentUser = null;
         navigate('home-page');
     }
@@ -213,7 +213,7 @@
             item_desc: document.getElementById('itemDesc').value
         };
 
-        const { error } = await supabase.from('items').insert([newItem]);
+        const { error } = await supabaseClient.from('items').insert([newItem]);
 
         if (error) {
             alert("Error adding item: " + error.message);
@@ -225,12 +225,12 @@
         btn.disabled = false; btn.innerText = "List Item";
     });
 
-    // Load Dashboard Items (Filter by current user)
+    // Load Dashboard Items
     async function loadDashboardItems() {
         const container = document.getElementById('dashboard-items-container');
         container.innerHTML = '<p class="loading">Loading your items...</p>'; 
 
-        const { data: items, error } = await supabase
+        const { data: items, error } = await supabaseClient
             .from('items')
             .select('*')
             .eq('seller_email', currentUser.email);
@@ -262,7 +262,7 @@
     // Delete Item
     async function deleteItem(itemId) {
         if(confirm("Are you sure you want to delete this listing?")) {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('items')
                 .delete()
                 .eq('id', itemId);
@@ -270,7 +270,7 @@
             if(error) {
                 alert("Error deleting item: " + error.message);
             } else {
-                loadDashboardItems(); // Refresh the list
+                loadDashboardItems();
             }
         }
     }
@@ -280,11 +280,10 @@
         const container = document.getElementById('items-container');
         container.innerHTML = '<p class="loading">Fetching available items...</p>'; 
 
-        // Fetch all items from Supabase
-        const { data: items, error } = await supabase
+        const { data: items, error } = await supabaseClient
             .from('items')
             .select('*')
-            .order('created_at', { ascending: false }); // Show newest first
+            .order('created_at', { ascending: false });
 
         if (error) {
             container.innerHTML = `<p style="color:red;">Error loading items: ${error.message}</p>`;
